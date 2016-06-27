@@ -29,7 +29,7 @@ class Import(object):
     enabled_handlers = IMPORT_HANDLERS
     source_inspectors = []
     target_inspectors = []
-    valid_extensions = ['gpx', 'geojson', 'json', 'zip', 'tar', 'kml', 'csv', 'shp']
+    valid_extensions = ['gpx', 'geojson', 'json', 'zip', 'tar', 'kml', 'csv', 'shp','gpkg','gdb']
 
     def filter_handler_results(self, handler_name):
         """

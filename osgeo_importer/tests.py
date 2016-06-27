@@ -189,6 +189,40 @@ class UploaderTests(MapStoryTestMixin):
         configure_time(self.cat.get_layer(layer.name).resource, attribute=date_attr.attribute,)
         self.generic_time_check(layer, attribute=date_attr.attribute)
 
+    def test_boxes_with_date_gpkg(self):
+        """
+        Tests the import of test_boxes_with_date.gpkg.
+        """
+
+        layer = self.generic_import('boxes_with_date.gpkg', configuration_options=[{'index': 0,
+                                                                                   'convert_to_date': ['date'],
+                                                                                   'start_date': 'date',
+                                                                                   'configureTime': True
+                                                                                   }])
+
+        date_attr = filter(lambda attr: attr.attribute == 'date_as_date', layer.attributes)[0]
+        self.assertEqual(date_attr.attribute_type, 'xsd:dateTime')
+
+        configure_time(self.cat.get_layer(layer.name).resource, attribute=date_attr.attribute,)
+        self.generic_time_check(layer, attribute=date_attr.attribute)
+
+    def test_boxes_with_date_gdb(self):
+        """
+        Tests the import of test_boxes_with_date.gdb.
+        """
+
+        layer = self.generic_import('boxes_with_date.gdb', configuration_options=[{'index': 0,
+                                                                                   'convert_to_date': ['date'],
+                                                                                   'start_date': 'date',
+                                                                                   'configureTime': True
+                                                                                   }])
+
+        date_attr = filter(lambda attr: attr.attribute == 'date_as_date', layer.attributes)[0]
+        self.assertEqual(date_attr.attribute_type, 'xsd:dateTime')
+
+        configure_time(self.cat.get_layer(layer.name).resource, attribute=date_attr.attribute,)
+        self.generic_time_check(layer, attribute=date_attr.attribute)
+
     def test_boxes_with_date_csv(self):
         """
         Tests a CSV with WKT polygon.
