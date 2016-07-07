@@ -158,7 +158,7 @@ class GDALInspector(InspectorMixin):
             return GDAL_GEOMETRY_TYPES[number]
         except KeyError:
             return
-
+    
     def describe_fields(self):
         """
         Returns a dict of the layers with fields and field types.
@@ -168,7 +168,8 @@ class GDALInspector(InspectorMixin):
 
         if not opened_file:
             opened_file = self.open()
-
+            
+        # Get Vector Layers
         for n in range(0, opened_file.GetLayerCount()):
             layer = opened_file.GetLayer(n)
             layer_description = {'name': layer.GetName(),
@@ -185,6 +186,14 @@ class GDALInspector(InspectorMixin):
                 field_desc['type'] = field.GetFieldTypeName(i)
                 layer_description['fields'].append(field_desc)
 
+            description.append(layer_description)
+
+        # Get Raster Layers
+        raster_list = opened_file.GetSubDataSets()
+        for m in range(0,raster_list.__len__()):
+            layer = gdal.OpenEx(raster_list[m][0])
+            layer_description = {'index': n+m,
+                                 'name': raster_list[m][1]}
             description.append(layer_description)
 
         return description
