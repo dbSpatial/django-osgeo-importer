@@ -251,27 +251,6 @@ class UploadLayer(models.Model):
         ordering = ('index',)
 
 
-class UploadFile(models.Model):
-    upload = models.ForeignKey(UploadedData, null=True, blank=True)
-    file = models.FileField(upload_to="uploads", validators=[validate_file_extension, validate_inspector_can_read])
-    slug = models.SlugField(max_length=250, blank=True)
-
-    def __unicode__(self):
-        return self.slug
-
-    @property
-    def name(self):
-        return os.path.basename(self.file.path)
-
-    def save(self, *args, **kwargs):
-        self.slug = self.file.name
-        super(UploadFile, self).save(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        self.file.delete(False)
-        super(UploadFile, self).delete(*args, **kwargs)
-
-
 class UploadException(models.Model):
     """
     A generic object for storing exceptions during upload
