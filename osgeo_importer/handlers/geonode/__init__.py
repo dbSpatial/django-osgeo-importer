@@ -4,9 +4,13 @@ from osgeo_importer.handlers import ImportHandlerMixin
 from osgeo_importer.handlers import ensure_can_run
 from geonode.geoserver.helpers import gs_slurp
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from django import db
 import os
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
@@ -27,7 +31,7 @@ class GeoNodePublishHandler(ImportHandlerMixin):
                 if feature_type and hasattr(feature_type, 'store'):
                     return feature_type.store.name
 
-        return db.connections['datastore'].settings_dict['NAME']
+        return db.connections[settings.OSGEO_DATASTORE].settings_dict['NAME']
 
     def can_run(self, layer, layer_config, *args, **kwargs):
         """
@@ -48,12 +52,14 @@ class GeoNodePublishHandler(ImportHandlerMixin):
         if isinstance(owner, str) or isinstance(owner, unicode):
             owner = User.objects.filter(username=owner).first()
 
-        if re.search(r'\.tif$', layer):
+        if layer_config['raster'] == True:
             store_name = os.path.splitext(os.path.basename(layer))[0]
             filter = None
         else:
             store_name = self.store_name
             filter = layer
+
+        logger.debug("running gs_slurp %s %s %s %s %s", self.workspace, store_name, filter, owner, layer_config.get('permissions'))
 
         results = gs_slurp(workspace=self.workspace,
                            store=store_name,

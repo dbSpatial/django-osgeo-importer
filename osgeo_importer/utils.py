@@ -255,7 +255,7 @@ def increment_filename(filename):
         file_root, file_ext = os.path.splitext(file_base)
         i = 1
         while i <= 100:
-            testfile = "%s/%s%s.%s" % (file_dir, file_root, i, file_ext)
+            testfile = "%s/%s%s%s" % (file_dir, file_root, i, file_ext)
 
             if not os.path.exists(testfile):
                 break
@@ -275,8 +275,8 @@ def raster_import(infile, outfile, *args, **kwargs):
     if os.path.exists(outfile):
         raise FileExists
 
-    if not os.path.exists(infile):
-        raise NoDataSourceFound
+    #if not os.path.exists(infile):
+    #    raise NoDataSourceFound
 
     options = get_kwarg('options', kwargs, ['TILED=YES'])
     sr = osr.SpatialReference()
@@ -292,6 +292,9 @@ def raster_import(infile, outfile, *args, **kwargs):
     if indata is None:
         raise NoDataSourceFound
 
+    if indata.GetProjectionRef() is None:
+        indata.SetProjection(t_srs_prj)
+
     vrt = gdal.AutoCreateWarpedVRT(indata, None, t_srs_prj, 0, .125)
     outdata = geotiff.CreateCopy(outfile, vrt, 0, options)
 
@@ -302,7 +305,7 @@ def raster_import(infile, outfile, *args, **kwargs):
 
 
 def quote_ident(str):
-    conn = db.connections['datastore']
+    conn = db.connections[settings.OSGEO_DATASTORE]
     cursor = conn.cursor()
     query = "SELECT quote_ident(%s);"
     cursor.execute(query, (str,))

@@ -168,15 +168,20 @@ class GDALInspector(InspectorMixin):
 
         if not opened_file:
             opened_file = self.open()
-            
+        
+        driver = opened_file.GetDriver().LongName
+
         # Get Vector Layers
+        n = 0
         for n in range(0, opened_file.GetLayerCount()):
             layer = opened_file.GetLayer(n)
-            layer_description = {'name': layer.GetName(),
+            layer_name = layer.GetName()
+            layer_description = {'layer_name': layer_name,
                                  'feature_count': layer.GetFeatureCount(),
                                  'fields': [],
                                  'index': n,
-                                 'geom_type': self.geometry_type(layer.GetGeomType())}
+                                 'geom_type': self.geometry_type(layer.GetGeomType()),
+                                 'raster': False, 'driver':driver}
 
             layer_definition = layer.GetLayerDefn()
             for i in range(layer_definition.GetFieldCount()):
@@ -189,11 +194,22 @@ class GDALInspector(InspectorMixin):
             description.append(layer_description)
 
         # Get Raster Layers
-        raster_list = opened_file.GetSubDataSets()
+        # Get main layer
+        if opened_file.GetMetadataItem('AREA_OR_POINT'):
+            layer_description = {'index': len(description),
+                                'layer_name': self.file,
+                                'path': self.file,
+                                'raster': True, 'driver':driver}
+            description.append(layer_description)
+        # Get sub layers
+        raster_list = opened_file.GetSubDatasets()
         for m in range(0,raster_list.__len__()):
             layer = gdal.OpenEx(raster_list[m][0])
-            layer_description = {'index': n+m,
-                                 'name': raster_list[m][1]}
+            layer_description = {'index': len(description),
+                                 'subdataset_index': m,
+                                 'path': raster_list[m][0],
+                                 'layer_name': raster_list[m][0].split(':')[-1],
+                                 'raster': True, 'driver':driver}
             description.append(layer_description)
 
         return description
@@ -318,7 +334,6 @@ class BigDateOGRFieldConverter(OGRInspector):
 
         target_layer.CreateField(ogr.FieldDefn(xd_col, ogr.OFTInteger64))
         xd_col_index = target_layer.GetLayerDefn().GetFieldIndex(xd_col)
-
         target_layer.CreateField(ogr.FieldDefn(parsed_col, ogr.OFTString))
         parsed_col_index = target_layer.GetLayerDefn().GetFieldIndex(parsed_col)
 
@@ -339,7 +354,7 @@ class BigDateOGRFieldConverter(OGRInspector):
 
             # prevent segfaults
             feat = None
-        conn = db.connections['datastore']
+        conn = db.connections[settings.OSGEO_DATASTORE]
         cursor = conn.cursor()
         query = """
         DO $$
