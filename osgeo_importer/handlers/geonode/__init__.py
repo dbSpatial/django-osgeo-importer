@@ -10,10 +10,8 @@ import os
 import re
 import logging
 
-logger = logging.getLogger(__name__)
-
 User = get_user_model()
-
+logger = logging.getLogger(__name__)
 
 class GeoNodePublishHandler(ImportHandlerMixin):
     """
@@ -47,19 +45,17 @@ class GeoNodePublishHandler(ImportHandlerMixin):
         Handler specific params:
         "layer_owner": Sets the owner of the layer.
         """
-
         owner = layer_config.get('layer_owner')
         if isinstance(owner, str) or isinstance(owner, unicode):
             owner = User.objects.filter(username=owner).first()
 
-        if layer_config['raster'] == True:
+        #if re.search(r'\.tif$', layer):
+        if layer_config.get('raster') == True:
             store_name = os.path.splitext(os.path.basename(layer))[0]
             filter = None
         else:
             store_name = self.store_name
             filter = layer
-
-        logger.debug("running gs_slurp %s %s %s %s %s", self.workspace, store_name, filter, owner, layer_config.get('permissions'))
 
         results = gs_slurp(workspace=self.workspace,
                            store=store_name,

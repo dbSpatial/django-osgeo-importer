@@ -124,24 +124,32 @@ class UploaderTests(DjagnoOsgeoMixin):
 
         res = self.import_file(filename, configuration_options=configuration_options)
 
-        print res
+        layer_results=[]
 
-        print res[0][0]
+        for result in res:
+            if result[1].get('raster') == True:
+                layerfile = result[0]
+                layername = os.path.splitext(os.path.basename(layerfile))[0]
+                layer = Layer.objects.get(name=layername)
+                self.assertTrue(layerfile.endswith('.tif'))
+                self.assertTrue(os.path.exists(layerfile))
+                l = gdal.OpenEx(layerfile)
+                self.assertTrue(l.GetDriver().ShortName, 'GTiff')
+                layer_results.append(layer)
+            else:
+                layer = Layer.objects.get(name=result[0])
+                self.assertEqual(layer.srid, 'EPSG:4326')
+                self.assertEqual(layer.store, self.datastore.name)
+                self.assertEqual(layer.storeType, 'dataStore')
 
-        print 'Layer Count %s'%Layer.objects.all().count()
+                if not filename.endswith('zip'):
+                    self.assertTrue(layer.attributes.count() >= DataSource(filename)[0].num_fields)
 
-        layer = Layer.objects.get(name=res[0][0])
-        self.assertEqual(layer.srid, 'EPSG:4326')
-        self.assertEqual(layer.store, self.datastore.name)
-        self.assertEqual(layer.storeType, 'dataStore')
+                # make sure we have at least one dateTime attribute
+                self.assertTrue('xsd:dateTime' or 'xsd:date' in [n.attribute_type for n in layer.attributes.all()])
+                layer_results.append(layer)
 
-        if not filename.endswith('zip'):
-            self.assertTrue(layer.attributes.count() >= DataSource(filename)[0].num_fields)
-
-        # make sure we have at least one dateTime attribute
-        self.assertTrue('xsd:dateTime' or 'xsd:date' in [n.attribute_type for n in layer.attributes.all()])
-
-        return layer
+        return layer_results[0]
 
     def generic_raster_import(self, file, configuration_options=[{'index': 0}]):
         f = file

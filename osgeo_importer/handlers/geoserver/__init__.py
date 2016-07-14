@@ -74,10 +74,9 @@ class GeoserverPublishHandler(GeoserverHandlerMixin):
         """
         Returns true if the configuration has enough information to run the handler.
         """
-        logger.debug('Publishing to GeoServer %s',layer_config)
-        if layer_config['raster'] == False:
+        #if re.search(r'\.tif$', layer):
+        if layer_config.get('raster') == True:
             return False
-
         return True
 
     def get_default_store(self):
@@ -175,7 +174,8 @@ class GeoserverPublishCoverageHandler(GeoserverHandlerMixin):
         """
         Returns true if the configuration has enough information to run the handler.
         """
-        if layer_config['raster'] == True:
+        #if re.search(r'\.tif$', layer):
+        if layer_config.get('raster') == True:
             return True
 
         return False
