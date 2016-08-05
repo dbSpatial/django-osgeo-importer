@@ -150,10 +150,14 @@ class GDALInspector(InspectorMixin):
         return self.data
 
     @staticmethod
-    def geometry_type(number):
+    def geometry_type(layer):
         """
         Returns a string of the geometry type based on the number.
         """
+        try:
+            number = layer.GetGeomType()
+        except RuntimeError:
+            return
         try:
             return GDAL_GEOMETRY_TYPES[number]
         except KeyError:
@@ -168,23 +172,53 @@ class GDALInspector(InspectorMixin):
 
         if not opened_file:
             opened_file = self.open()
+        driver = opened_file.GetDriver().ShortName
 
+        # Get Vector Layers
         for n in range(0, opened_file.GetLayerCount()):
             layer = opened_file.GetLayer(n)
-            layer_description = {'name': layer.GetName(),
-                                 'feature_count': layer.GetFeatureCount(),
+            layer_name = layer.GetName()
+            geometry_type = self.geometry_type(layer)
+            layer_description = {'layer_name': layer_name,
+                                 'feature_count': None,
                                  'fields': [],
                                  'index': n,
-                                 'geom_type': self.geometry_type(layer.GetGeomType())}
+                                 'geom_type': geometry_type,
+                                 'raster': False,
+                                 'driver': driver,
+                                 'layer_definition': None}
+            if driver != 'WFS':
+                layer_description['feature_count'] = layer.GetFeatureCount()
+                layer_definition = layer.GetLayerDefn()
 
-            layer_definition = layer.GetLayerDefn()
-            for i in range(layer_definition.GetFieldCount()):
-                field_desc = {}
-                field = layer_definition.GetFieldDefn(i)
-                field_desc['name'] = field.GetName()
-                field_desc['type'] = field.GetFieldTypeName(i)
-                layer_description['fields'].append(field_desc)
+                for i in range(layer_definition.GetFieldCount()):
+                    field_desc = {}
+                    field = layer_definition.GetFieldDefn(i)
+                    field_desc['name'] = field.GetName()
+                    field_desc['type'] = field.GetFieldTypeName(i)
+                    layer_description['fields'].append(field_desc)
 
+            description.append(layer_description)
+
+        # Get Raster Layers
+        # Get main layer
+        if opened_file.GetMetadataItem('AREA_OR_POINT'):
+            layer_description = {'index': len(description),
+                                 'layer_name': self.file,
+                                 'path': self.file,
+                                 'raster': True,
+                                 'driver': driver}
+            description.append(layer_description)
+
+        # Get sub layers
+        raster_list = opened_file.GetSubDatasets()
+        for m in range(0, raster_list.__len__()):
+            layer = gdal.OpenEx(raster_list[m][0])
+            layer_description = {'index': len(description),
+                                 'subdataset_index': m,
+                                 'path': raster_list[m][0],
+                                 'layer_name': raster_list[m][0].split(':')[-1],
+                                 'raster': True, 'driver': driver}
             description.append(layer_description)
 
         return description
@@ -309,7 +343,6 @@ class BigDateOGRFieldConverter(OGRInspector):
 
         target_layer.CreateField(ogr.FieldDefn(xd_col, ogr.OFTInteger64))
         xd_col_index = target_layer.GetLayerDefn().GetFieldIndex(xd_col)
-
         target_layer.CreateField(ogr.FieldDefn(parsed_col, ogr.OFTString))
         parsed_col_index = target_layer.GetLayerDefn().GetFieldIndex(parsed_col)
 
@@ -330,7 +363,7 @@ class BigDateOGRFieldConverter(OGRInspector):
 
             # prevent segfaults
             feat = None
-        conn = db.connections['datastore']
+        conn = db.connections[settings.OSGEO_DATASTORE]
         cursor = conn.cursor()
         query = """
         DO $$

@@ -17,7 +17,7 @@ urlpatterns = patterns("",
                        url(r'^uploads/new$', login_required(FileAddView.as_view()), name='uploads-new'),
                        url(r'^uploads/new-multi-json$', login_required(MultiUpload.as_view(json=True)),
                            name='uploads-multi-json'),
-                       url(r'^uploads/new/json$', login_required(FileAddView.as_view(json=True)),
+                       url(r'^uploads/new/json$', login_required(MultiUpload.as_view(json=True)),
                            name='uploads-new-json'),
                        url(r'^uploads/?$', login_required(UploadListView.as_view()), name='uploads-list'),
                        url(r'', include(importer_api.urls)),)

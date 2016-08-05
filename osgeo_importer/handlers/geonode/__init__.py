@@ -7,16 +7,16 @@ from geonode.layers.metadata import set_metadata
 from geonode.layers.utils import resolve_regions
 from django.contrib.auth import get_user_model
 from django.core.files.storage import FileSystemStorage
+from django.conf import settings
 from django import db
 import os
-import re
+import logging
 
 import logging
 log = logging.getLogger(__name__)
 
 User = get_user_model()
 MEDIA_ROOT = FileSystemStorage().location
-
 
 class GeoNodePublishHandler(ImportHandlerMixin):
     """
@@ -34,7 +34,7 @@ class GeoNodePublishHandler(ImportHandlerMixin):
                 if feature_type and hasattr(feature_type, 'store'):
                     return feature_type.store.name
 
-        return db.connections['datastore'].settings_dict['NAME']
+        return db.connections[settings.OSGEO_DATASTORE].settings_dict['NAME']
 
     def can_run(self, layer, layer_config, *args, **kwargs):
         """
@@ -50,12 +50,11 @@ class GeoNodePublishHandler(ImportHandlerMixin):
         Handler specific params:
         "layer_owner": Sets the owner of the layer.
         """
-
         owner = layer_config.get('layer_owner')
         if isinstance(owner, str) or isinstance(owner, unicode):
             owner = User.objects.filter(username=owner).first()
 
-        if re.search(r'\.tif$', layer):
+        if layer_config.get('raster'):
             store_name = os.path.splitext(os.path.basename(layer))[0]
             filter = None
         else:
