@@ -143,7 +143,6 @@ class UploaderTests(DjagnoOsgeoMixin):
         for file, handle in handles.items():
             handle.close()
         content = json.loads(response.content)
-
         self.assertEqual(response.status_code, 200)
         self.assertEqual(content['id'], 1)
         return content
@@ -680,7 +679,8 @@ class UploaderTests(DjagnoOsgeoMixin):
         with open(f) as fp:
             response = c.post(reverse('uploads-new'), {'file': fp}, follow=True)
 
-        upload = response.context['object_list'][0]
+        upload = response.context_data
+        upload_id = upload['id']
 
         payload = [{'index': 0,
                     'convert_to_date': ['date'],
@@ -691,7 +691,7 @@ class UploaderTests(DjagnoOsgeoMixin):
                                               'AnonymousUser': ["change_layer_data", "download_resourcebase",
                                                                 "view_resourcebase"]}}}]
 
-        response = c.post('/importer-api/data-layers/{0}/configure/'.format(upload.id), data=json.dumps(payload),
+        response = c.post('/importer-api/data-layers/{0}/configure/'.format(upload_id), data=json.dumps(payload),
                           content_type='application/json')
 
         self.assertTrue(response.status_code, 200)
@@ -733,7 +733,8 @@ class UploaderTests(DjagnoOsgeoMixin):
         with open(f) as fp:
             response = c.post(reverse('uploads-new'), {'file': fp}, follow=True)
 
-        upload = response.context['object_list'][0]
+        upload = response.context_data
+        upload_id = upload['id']
 
         payload = [{'index': 0,
                     'convert_to_date': ['Date'],
@@ -742,13 +743,13 @@ class UploaderTests(DjagnoOsgeoMixin):
                     'editable': True}]
 
 
-        response = c.get('/importer-api/data-layers/{0}/configure/'.format(upload.id))
+        response = c.get('/importer-api/data-layers/{0}/configure/'.format(upload_id))
         self.assertEqual(response.status_code, 405)
 
-        response = c.post('/importer-api/data-layers/{0}/configure/'.format(upload.id))
+        response = c.post('/importer-api/data-layers/{0}/configure/'.format(upload_id))
         self.assertEqual(response.status_code, 400)
 
-        response = c.post('/importer-api/data-layers/{0}/configure/'.format(upload.id), data=json.dumps(payload),
+        response = c.post('/importer-api/data-layers/{0}/configure/'.format(upload_id), data=json.dumps(payload),
                           content_type='application/json')
         self.assertTrue(response.status_code, 200)
 
@@ -764,7 +765,7 @@ class UploaderTests(DjagnoOsgeoMixin):
         # ensure a user who does not own the upload cannot configure an import from it.
         c.logout()
         c.login_as_admin()
-        response = c.post('/importer-api/data-layers/{0}/configure/'.format(upload.id))
+        response = c.post('/importer-api/data-layers/{0}/configure/'.format(upload_id))
         self.assertEqual(response.status_code, 404)
 
     def test_list_api(self):

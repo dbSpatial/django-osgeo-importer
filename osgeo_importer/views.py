@@ -6,6 +6,7 @@ from django.http import HttpResponse, Http404
 from django.views.generic import View, FormView, ListView, TemplateView
 from django.core.urlresolvers import reverse_lazy
 from django.core.files.storage import FileSystemStorage
+from django.shortcuts import redirect
 from .forms import UploadFileForm
 from .models import UploadedData, UploadLayer, UploadFile, DEFAULT_LAYER_CONFIGURATION
 from .importers import OSGEO_IMPORTER
@@ -170,8 +171,14 @@ def configure_layers(configs, upload_id=None):
     return complete
 
 
-class MultiUpload(View, ImportHelper, JSONResponseMixin):
-    json = True
+class Upload(FormView, ImportHelper, JSONResponseMixin):
+    form_class = UploadFileForm
+    success_url = reverse_lazy('uploads-list')
+    template_name = 'osgeo_importer/new.html'
+    json = False
+
+    def render_to_response(self, context, **response_kwargs):
+        return super(Upload, self).render_to_response(context, **response_kwargs)
 
     def post(self, request):
         log.debug("File List: %s", request.FILES.getlist('file'))
@@ -267,4 +274,7 @@ class MultiUpload(View, ImportHelper, JSONResponseMixin):
             complete_layers = configure_layers(config, upload_id=upload.pk)
             response['layers'] = complete_layers
 
-        return self.render_to_json_response(response)
+        if self.json:
+            return self.render_to_json_response(response)
+        else:
+            return redirect(self.success_url)
